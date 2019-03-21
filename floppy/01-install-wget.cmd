@@ -20,13 +20,13 @@ if exist "%filename%" goto exit0
 
 :_download_cmd_not_found
 
-echo ==^> Downloading "%WGET_URL%" to "%filename%"
-
-:powershell
-
-powershell -Command "(New-Object System.Net.WebClient).DownloadFile('%WGET_URL%', '%filename%')" <NUL
+call _packer_config.cmd ps1_download "%WGET_URL%" "%filename%"
 
 if exist "%filename%" goto exit0
+
+if defined USE_BITS (
+    if "%DISABLE_BITS%" == "1" if not exist "%filename%" goto exit1
+)
 
 set bitsadmin=
 

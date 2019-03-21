@@ -1,5 +1,10 @@
 @echo off
 
+:: Calls functions with args from this file below.
+if not "%~1" == "" (
+   call :%*
+)
+
 :: Uncomment the following to set a different Cygwin mirror
 :: Default: http://mirrors.kernel.org/sourceware/cygwin
 :: set CYGWIN_MIRROR_URL=http://mirrors.kernel.org/sourceware/cygwin
@@ -7,6 +12,10 @@
 :: Uncomment the following to echo commands as they are run
 :: Default: (unset)
 :: set PACKER_DEBUG=1
+
+:: Uncomment to disable BITS so scripts can fail instead of hanging.
+:: Default: (unset)
+:: set DISABLE_BITS=1
 
 :: Uncomment the following to define the directory where scripts/save-logs.cmd
 :: will save the installation logs
@@ -46,3 +55,26 @@ set PACKER_SERVICES=opensshd sshd BvSshServer winrm
 :: Uncomment the following to define a new password for the sshd service
 :: Default: D@rj33l1ng
 :: set SSHD_PASSWORD=D@rj33l1ng
+
+exit /b
+
+:ps1_download
+  set url=%~1
+  set filename=%~2
+
+  echo ==^> Downloading "%url%" to "%filename%"
+
+  if defined http_proxy (
+      if defined no_proxy (
+          set ps1_script="$wc = (New-Object System.Net.WebClient) ; $wc.proxy = (new-object System.Net.WebProxy('%http_proxy%')) ; $wc.proxy.BypassList = (('%no_proxy%').split(',')) ; $wc.DownloadFile('%url%', '%filename%')"
+      ) else (
+          set ps1_script="$wc = (New-Object System.Net.WebClient) ; $wc.proxy = (new-object System.Net.WebProxy('%http_proxy%')) ; $wc.DownloadFile('%url%', '%filename%')"
+      )
+  ) else (
+      set ps1_script="(New-Object System.Net.WebClient).DownloadFile('%url%', '%filename%')"
+  )
+
+  powershell -command %ps1_script% >nul
+  exit /b
+
+
