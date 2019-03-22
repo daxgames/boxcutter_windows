@@ -2,6 +2,8 @@
 @for %%i in (a:\_packer_config*.cmd) do @call "%%~i"
 @if defined PACKER_DEBUG (@echo on) else (@echo off)
 
+if not defined TEMP set TEMP=%USERPROFILE%\AppData\Local\Temp
+
 if not defined CM echo ==^> ERROR: The "CM" variable was not found in the environment & goto exit1
 
 if "%CM%" == "nocm"   goto nocm
@@ -22,13 +24,56 @@ goto exit1
 ::::::::::::
 
 if not defined CHEF_URL if "%CM_VERSION%" == "latest" set CM_VERSION=13.6.4
-if not defined CHEF_URL set CHEF_64_URL=https://packages.chef.io/files/stable/chef/%CM_VERSION%/windows/2008r2/chef-client-%CM_VERSION%-1-x64.msi
-if not defined CHEF_URL set CHEF_32_URL=https://packages.chef.io/files/stable/chef/%CM_VERSION%/windows/2008r2/chef-client-%CM_VERSION%-1-x86.msi
 
-if defined ProgramFiles(x86) (
-  SET CHEF_URL=%CHEF_64_URL%
-) else (
-  SET CHEF_URL=%CHEF_32_URL%
+:: srtrip -1 if %CM_VERSION% ends in -1
+set CM_VERSION=%CM_VERSION:-1=%
+
+if not defined CHEF_URL (
+    echo ==^> Getting Chef %CM_VERSION% download URL
+    set "omnitruck_x86_url=https://omnitruck.chef.io/stable/chef/metadata?p=windows&pv=2008r2&m=x86&v=%CM_VERSION%"
+    if defined http_proxy (
+        powershell -Command "$wc = (New-Object System.Net.WebClient); $wc.proxy = (new-object System.Net.WebProxy('%http_proxy%')) ; $wc.proxy.BypassList = (('%no_proxy%').split(',')) ; $wc.DownloadFile('!omnitruck_x86_url!', '%temp%\omnitruck_x86.txt')" >nul
+    ) else (
+        powershell -Command "(New-Object System.Net.WebClient).DownloadFile('!omnitruck_x86_url!', '%temp%\omnitruck_x86.txt')" >nul
+    )
+
+    if not exist "%temp%\omnitruck_x86.txt" (
+      echo Could not get chef-client %CM_VERSION% x86 download url...
+    ) else (
+        for /f "tokens=2 usebackq" %%a in (`findstr "url" "%temp%\omnitruck_x86.txt"`) do (
+            set CHEF_32_URL=%%a
+        )
+    )
+
+    if defined ProgramFiles^(x86^) (
+        set "omnitruck_x64_url=https://omnitruck.chef.io/stable/chef/metadata?p=windows&pv=2008r2&m=x64&v=%CM_VERSION%"
+        if defined http_proxy (
+            powershell -Command "$wc = (New-Object System.Net.WebClient); $wc.proxy = (new-object System.Net.WebProxy('%http_proxy%')) ; $wc.proxy.BypassList = (('%no_proxy%').split(',')) ; $wc.DownloadFile('!omnitruck_x64_url!', '%temp%\omnitruck_x64.txt')" >nul
+        ) else (
+            powershell -Command "(New-Object System.Net.WebClient).DownloadFile('!omnitruck_x64_url!', '%temp%\omnitruck_x64.txt')" >nul
+        )
+
+        if not exist "%temp%\omnitruck_x64.txt" (
+            echo Could not get chef-client %CM_VERSION% x64 download url...
+        ) else (
+            for /f "tokens=2 usebackq" %%a in (`findstr "url" "%temp%\omnitruck_x64.txt"`) do (
+                set CHEF_64_URL=%%a
+            )
+        )
+    )
+
+    if defined CHEF_64_URL (
+        SET CHEF_URL=!CHEF_64_URL!
+        set CHEF_ARCH=x86_64
+    ) else if defined CHEF_32_URL (
+        SET CHEF_URL=!CHEF_32_URL!
+        set CHEF_ARCH=x86
+    )
+
+    if not defined CHEF_URL (
+      echo Could not get Chef %CM_VERSION% download url...
+      goto exit1
+    )
 )
 
 for %%i in ("%CHEF_URL%") do set CHEF_MSI=%%~nxi
@@ -46,7 +91,7 @@ if exist "%SystemRoot%\_download.cmd" (
 )
 if not exist "%CHEF_PATH%" goto exit1
 
-echo ==^> Installing Chef client %CM_VERSION%
+echo ==^> Installing Chef client %CM_VERSION% %CHEF_ARCH%
 msiexec /qb /i "%CHEF_PATH%" /l*v "%CHEF_DIR%\chef.log" %CHEF_OPTIONS%
 
 @if errorlevel 1 echo ==^> WARNING: Error %ERRORLEVEL% was returned by: msiexec /qb /i "%CHEF_PATH%" /l*v "%CHEF_DIR%\chef.log" %CHEF_OPTIONS%
@@ -59,13 +104,56 @@ goto exit0
 ::::::::::::
 
 if not defined CHEFDK_URL if "%CM_VERSION%" == "latest" set CM_VERSION=2.3.4
-if not defined CHEFDK_URL set CHEFDK_64_URL=https://packages.chef.io/files/stable/chefdk/%CM_VERSION%/windows/2008r2/chefdk-%CM_VERSION%-1-x86.msi
-if not defined CHEFDK_URL set CHEFDK_32_URL=https://packages.chef.io/files/stable/chefdk/%CM_VERSION%/windows/2008r2/chefdk-%CM_VERSION%-1-x86.msi
 
-if defined ProgramFiles(x86) (
-  SET CHEFDK_URL=%CHEFDK_64_URL%
-) else (
-  SET CHEFDK_URL=%CHEFDK_32_URL%
+:: srtrip -1 if %CM_VERSION% ends in -1
+set CM_VERSION=%CM_VERSION:-1=%
+
+if not defined CHEFDK_URL (
+    echo ==^> Getting ChefDK %CM_VERSION% download URL
+    set "omnitruck_x86_url=https://omnitruck.chef.io/stable/chefdk/metadata?p=windows&pv=2008r2&m=x86&v=%CM_VERSION%"
+    if defined http_proxy (
+        powershell -Command "$wc = (New-Object System.Net.WebClient); $wc.proxy = (new-object System.Net.WebProxy('%http_proxy%')) ; $wc.proxy.BypassList = (('%no_proxy%').split(',')) ; $wc.DownloadFile('!omnitruck_x86_url!', '%temp%\omnitruck_x86.txt')" >nul
+    ) else (
+        powershell -Command "(New-Object System.Net.WebClient).DownloadFile('!omnitruck_x86_url!', '%temp%\omnitruck_x86.txt')" >nul
+    )
+
+    if not exist "%temp%\omnitruck_x86.txt" (
+        echo Could not get chefdk %CM_VERSION% x86 download url...
+    ) else (
+      for /f "tokens=2 usebackq" %%a in (`findstr "url" "%temp%\omnitruck_x86.txt"`) do (
+          set CHEFDK_32_URL=%%a
+      )
+    )
+
+    if defined ProgramFiles^(x86^) (
+        set "omnitruck_x64_url=https://omnitruck.chef.io/stable/chefdk/metadata?p=windows&pv=2008r2&m=x64&v=%CM_VERSION%"
+        if defined http_proxy (
+            powershell -Command "$wc = (New-Object System.Net.WebClient); $wc.proxy = (new-object System.Net.WebProxy('%http_proxy%')) ; $wc.proxy.BypassList = (('%no_proxy%').split(',')) ; $wc.DownloadFile('!omnitruck_x64_url!', '%temp%\omnitruck_x64.txt')" >nul
+        ) else (
+            powershell -Command "(New-Object System.Net.WebClient).DownloadFile('!omnitruck_x64_url!', '%temp%\omnitruck_x64.txt')" >nul
+        )
+
+        if not exist "%temp%\omnitruck_x64.txt" (
+            echo Could not get chefdk %CM_VERSION% x64 download url...
+        ) else (
+            for /f "tokens=2 usebackq" %%a in (`findstr "url" "%temp%\omnitruck_x64.txt"`) do (
+                set CHEFDK_64_URL=%%a
+            )
+        )
+    )
+
+    if defined CHEFDK_64_URL (
+        SET CHEFDK_URL=!CHEFDK_64_URL!
+        SET CHEFDK_ARCH=x86_64
+    ) else if defined CHEFDK_32_URL (
+        SET CHEFDK_URL=!CHEFDK_32_URL!
+        SET CHEFDK_ARCH=x86
+    )
+
+    if not defined CHEFDK_URL (
+      echo Could not get chefdk %CM_VERSION% download url...
+      goto exit1
+    )
 )
 
 for %%i in ("%CHEFDK_URL%") do set CHEFDK_MSI=%%~nxi
@@ -84,7 +172,7 @@ if exist "%SystemRoot%\_download.cmd" (
 )
 if not exist "%CHEFDK_PATH%" goto exit1
 
-echo ==^> Installing Chef Development Kit %CM_VERSION%
+echo ==^> Installing Chef Development Kit %CM_VERSION% %CHEFDK_ARCH%
 msiexec /qb /i "%CHEFDK_PATH%" /l*v "%CHEFDK_DIR%\chef.log" %CHEFDK_OPTIONS%
 
 @if errorlevel 1 echo ==^> WARNING: Error %ERRORLEVEL% was returned by: msiexec /qb /i "%CHEFDK_PATH%" /l*v "%CHEFDK_DIR%\chef.log" %CHEFDK_OPTIONS%
