@@ -10,17 +10,9 @@ if "%CM%" == "nocm"   goto nocm
 
 if not defined CM_VERSION echo ==^> ERROR: The "CM_VERSION" variable was not found in the environment & set CM_VERSION=latest
 
-if "%CM%" == "chef" (
-  call :chef-cm "Chef" chef %CM_VERSION%
-  goto exit%errorlevel%
-) else if "%CM%" == "chefdk" (
-  call :chef-cm "Chef DK" chefdk %CM_VERSION%
-  goto exit%errorlevel%
-) else if "%CM%" == "chef-workstation" (
-  call :chef-cm "Chef Workstation" chef-workstation %CM_VERSION%
-  goto exit%errorlevel%
-)
-
+if "%CM%" == "chef" goto chef-cm
+if "%CM%" == "chefdk" goto chef-cm
+if "%CM%" == "chef-workstation" goto chef-cm
 if "%CM%" == "puppet" goto puppet
 if "%CM%" == "salt"   goto salt
 
@@ -31,10 +23,16 @@ goto exit1
 ::::::::::::
 :chef-cm
 ::::::::::::
+if "%CM%" == "chef" (
+  set "CHEF_PRODUCT_NAME=Chef Client"
+) else if "%CM%" == "chefdk" (
+  set "CHEF_PRODUCT_NAME=Chef DK"
+) else if "%CM%" == "chef-workstation" (
+  set "CHEF_PRODUCT_NAME=Chef Workstation"
+)
 
-set CHEF_PRODUCT_NAME=%~1
-set CHEF_PRODUCT_KEY=%~2
-set CHEF_PRODUCT_VER=%~3
+set CHEF_PRODUCT_KEY=%CM%
+set CHEF_PRODUCT_VER=%CM_VERSION%
 
 if not defined CHEF_URL if "%CHEF_PRODUCT_VER%" == "latest" (
     if "%CHEF_PRODUCT_KEY%" == "chef-workstation" (
@@ -104,12 +102,10 @@ if not exist "%CHEF_PATH%" goto exit1
 echo ==^> Installing %CHEF_PRODUCT_NAME% %CHEF_PRODUCT_VER% %WINDOWS_ARCH%
 msiexec /qb /i "%CHEF_PATH%" /l*v "%CHEF_DIR%\chef.log" %CHEF_OPTIONS%
 
-@if errorlevel 1 (
-  echo ==^> WARNING: Error %ERRORLEVEL% was returned by: msiexec /qb /i "%CHEF_PATH%" /l*v "%CHEF_DIR%\chef.log" %CHEF_OPTIONS%
-  exit /b 1
-)
-exit /b 0
+@if errorlevel 1 echo ==^> WARNING: Error %ERRORLEVEL% was returned by: msiexec /qb /i "%CHEF_PATH%" /l*v "%CHEF_DIR%\chef.log" %CHEF_OPTIONS%
+ver>nul
 
+goto exit0
 
 ::::::::::::
 :puppet
