@@ -32,7 +32,7 @@ goto exit1
 :chef-cm
 ::::::::::::
 
-set CHEF_DISPLAYNAME=%~1
+set CHEF_PRODUCT_NAME=%~1
 set CHEF_PRODUCT_KEY=%~2
 set CHEF_PRODUCT_VER=%~3
 
@@ -56,11 +56,11 @@ if defined ProgramFiles^(x86^) (
 )
 
 if not defined CHEF_URL (
-    echo ==^> Getting %CHEF_DISPLAYNAME% %CHEF_PRODUCT_VER% %WINDOWS_ARCH% download URL
+    echo ==^> Getting %CHEF_PRODUCT_NAME% %CHEF_PRODUCT_VER% %WINDOWS_ARCH% download URL
     set url="https://omnitruck.chef.io/stable/%CHEF_PRODUCT_KEY%/metadata?p=windows&pv=2012r2&m=%WINDOWS_ARCH%&v=%CHEF_PRODUCT_VER%"
     set filename="%temp%\omnitruck.txt"
 
-    echo "==^> Got %CHEF_DISPLAYNAME% download URL: !url!"
+    echo "==^> Got %CHEF_PRODUCT_NAME% download URL: !url!"
     if defined http_proxy (
         if defined no_proxy (
             powershell -Command "$wc = (New-Object System.Net.WebClient); $wc.proxy = (new-object System.Net.WebProxy('%http_proxy%')) ; $wc.proxy.BypassList = (('%no_proxy%').split(',')) ; $wc.DownloadFile('!url!', '!filename!')"
@@ -72,7 +72,7 @@ if not defined CHEF_URL (
     )
 
     if not exist "%temp%\omnitruck.txt" (
-        echo Could not get %CHEF_DISPLAYNAME% %CHEF_PRODUCT_VER% %WINDOWS_ARCH% download url...
+        echo Could not get %CHEF_PRODUCT_NAME% %CHEF_PRODUCT_VER% %WINDOWS_ARCH% download url...
     ) else (
       for /f "tokens=2 usebackq" %%a in (`findstr "url" "%temp%\omnitruck.txt"`) do (
           set CHEF_URL=%%a
@@ -80,7 +80,7 @@ if not defined CHEF_URL (
     )
 
     if not defined CHEF_URL (
-      echo Could not get %CHEF_DISPLAYNAME% %CHEF_PRODUCT_VER% %WINDOWS_ARCH% download url...
+      echo Could not get %CHEF_PRODUCT_NAME% %CHEF_PRODUCT_VER% %WINDOWS_ARCH% download url...
       goto exit1
     )
 )
