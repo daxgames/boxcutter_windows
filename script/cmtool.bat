@@ -10,8 +10,17 @@ if "%CM%" == "nocm"   goto nocm
 
 if not defined CM_VERSION echo ==^> ERROR: The "CM_VERSION" variable was not found in the environment & set CM_VERSION=latest
 
-if "%CM%" == "chef"   goto chef
-if "%CM%" == "chefdk" goto chefdk
+if "%CM%" == "chef" (
+  call :chef-cm "Chef" chef %CM_VERSION%
+  goto exit%errorlevel%
+) else if "%CM%" == "chefdk" (
+  call :chef-cm "Chef DK" chefdk %CM_VERSION%
+  goto exit%errorlevel%
+) else if "%CM%" == "chef-workstation" (
+  call :chef-cm "Chef Workstation" chef-workstation %CM_VERSION%
+  goto exit%errorlevel%
+)
+
 if "%CM%" == "puppet" goto puppet
 if "%CM%" == "salt"   goto salt
 
@@ -20,62 +29,83 @@ echo ==^> ERROR: Unknown value for environment variable CM: "%CM%"
 goto exit1
 
 ::::::::::::
-:chef
+:chef-cm
 ::::::::::::
 
-if not defined CHEF_URL if "%CM_VERSION%" == "latest" set CM_VERSION=13.6.4
+set CHEF_DISPLAYNAME=%~1
+set CHEF_PRODUCT_KEY=%~2
+set CHEF_PRODUCT_VER=%~3
 
-:: srtrip -1 if %CM_VERSION% ends in -1
-set CM_VERSION=%CM_VERSION:-1=%
+if not defined CHEF_URL if "%CHEF_PRODUCT_VER%" == "latest" (
+    if "%CHEF_PRODUCT_KEY%" == "chef-workstation" (
+        set CHEF_PRODUCT_VER=0.2.48
+    ) else if "%CHEF_PRODUCT_KEY%" == "chefdk" (
+        set CHEF_PRODUCT_VER=2.3.4
+    ) else if "%CHEF_PRODUCT_KEY%" == "chef" (
+        set CHEF_PRODUCT_VER=13.6.4
+    )
+)
+
+:: srtrip -1 if %CHEF_PRODUCT_VER% ends in -1
+set CHEF_PRODUCT_VER=%CHEF_PRODUCT_VER:-1=%
+
+if defined ProgramFiles^(x86^) (
+  set WINDOWS_ARCH=x64
+  SET CHEF_ARCH=x86_64
+) else (
+  set WINDOWS_ARCH=x86
+  SET CHEF_ARCH=x86
+)
 
 if not defined CHEF_URL (
-    echo ==^> Getting Chef %CM_VERSION% download URL
-    set "omnitruck_x86_url=https://omnitruck.chef.io/stable/chef/metadata?p=windows&pv=2008r2&m=x86&v=%CM_VERSION%"
-    call _packer_config.cmd ps1_download "!omnitruck_x86_url!" "%temp%\omnitruck_x86.txt"
+    echo ==^> Getting %CHEF_DISPLAYNAME% %CHEF_PRODUCT_VER% %WINDOWS_ARCH% download URL
+    set url="https://omnitruck.chef.io/stable/%CHEF_PRODUCT_KEY%/metadata?p=windows&pv=2012r2&m=%WINDOWS_ARCH%&v=%CHEF_PRODUCT_VER%"
+    set filename="%temp%\omnitruck.txt"
 
-    if not exist "%temp%\omnitruck_x86.txt" (
-      echo Could not get chef-client %CM_VERSION% x86 download url...
-    ) else (
-        for /f "tokens=2 usebackq" %%a in (`findstr "url" "%temp%\omnitruck_x86.txt"`) do (
-            set CHEF_32_URL=%%a
-        )
-    )
-
-    if defined ProgramFiles^(x86^) (
-        set "omnitruck_x64_url=https://omnitruck.chef.io/stable/chef/metadata?p=windows&pv=2008r2&m=x64&v=%CM_VERSION%"
-        call _packer_config.cmd ps1_download "!omnitruck_x64_url!" "%temp%\omnitruck_x64.txt"
-
-        if not exist "%temp%\omnitruck_x64.txt" (
-            echo Could not get chef-client %CM_VERSION% x64 download url...
+    echo "url: !url!"
+    echo "filename: !filename!"
+    if defined http_proxy (
+        if defined no_proxy (
+            powershell -Command "$wc = (New-Object System.Net.WebClient); $wc.proxy = (new-object System.Net.WebProxy('%http_proxy%')) ; $wc.proxy.BypassList = (('%no_proxy%').split(',')) ; $wc.DownloadFile('!url!', '!filename!')"
+            rem set ps1_script="$wc = (New-Object System.Net.WebClient) ; $wc.proxy = (new-object System.Net.WebProxy('%http_proxy%')) ; $wc.proxy.BypassList = (('%no_proxy%').split(',')) ; $wc.DownloadFile('!url!', '!filename!')"
         ) else (
-            for /f "tokens=2 usebackq" %%a in (`findstr "url" "%temp%\omnitruck_x64.txt"`) do (
-                set CHEF_64_URL=%%a
-            )
+            powershell -Command "$wc = (New-Object System.Net.WebClient); $wc.proxy = (new-object System.Net.WebProxy('%http_proxy%')) ; $wc.DownloadFile('!url!', '!filename!')"
+            rem set ps1_script="$wc = (New-Object System.Net.WebClient) ; $wc.proxy = (new-object System.Net.WebProxy('%http_proxy%')) ; $wc.DownloadFile('!url!', '!filename!')"
         )
+    ) else (
+        powershell -command "(New-Object System.Net.WebClient).DownloadFile('!url!', '!filename!')"
+        rem set ps1_script="(New-Object System.Net.WebClient).DownloadFile('!url!', '!filename!')"
     )
 
-    if defined CHEF_64_URL (
-        SET CHEF_URL=!CHEF_64_URL!
-        set CHEF_ARCH=x86_64
-    ) else if defined CHEF_32_URL (
-        SET CHEF_URL=!CHEF_32_URL!
-        set CHEF_ARCH=x86
+    rem echo powershell -command !ps1_script!
+    rem powershell -command !ps1_script!
+
+    rem echo Calling ps1_download ps1_download !url! !filename!
+    rem call _packer_config.cmd ps1_download !url! !filename!
+
+    if not exist "%temp%\omnitruck.txt" (
+        echo Could not get %CHEF_DISPLAYNAME% %CHEF_PRODUCT_VER% %WINDOWS_ARCH% download url...
+    ) else (
+      for /f "tokens=2 usebackq" %%a in (`findstr "url" "%temp%\omnitruck.txt"`) do (
+          set CHEF_URL=%%a
+      )
     )
 
     if not defined CHEF_URL (
-      echo Could not get Chef %CM_VERSION% download url...
+      echo Could not get %CHEF_DISPLAYNAME% %CHEF_PRODUCT_VER% %WINDOWS_ARCH% download url...
       goto exit1
     )
 )
 
 for %%i in ("%CHEF_URL%") do set CHEF_MSI=%%~nxi
-set CHEF_DIR=%TEMP%\chef
+set CHEF_DIR=%TEMP%\%CHEF_PRODUCT_KEY%
 set CHEF_PATH=%CHEF_DIR%\%CHEF_MSI%
 
 echo ==^> Creating "%CHEF_DIR%"
 mkdir "%CHEF_DIR%"
 pushd "%CHEF_DIR%"
 
+echo ==^> Downloading %CHEF_PRODUCT_NAME% to %CHEF_PATH%
 if exist "%SystemRoot%\_download.cmd" (
   call "%SystemRoot%\_download.cmd" "%CHEF_URL%" "%CHEF_PATH%"
 ) else (
@@ -83,86 +113,15 @@ if exist "%SystemRoot%\_download.cmd" (
 )
 if not exist "%CHEF_PATH%" goto exit1
 
-echo ==^> Installing Chef client %CM_VERSION% %CHEF_ARCH%
+echo ==^> Installing %CHEF_PRODUCT_NAME% %CHEF_PRODUCT_VER% %CHEF_ARCH%
 msiexec /qb /i "%CHEF_PATH%" /l*v "%CHEF_DIR%\chef.log" %CHEF_OPTIONS%
 
-@if errorlevel 1 echo ==^> WARNING: Error %ERRORLEVEL% was returned by: msiexec /qb /i "%CHEF_PATH%" /l*v "%CHEF_DIR%\chef.log" %CHEF_OPTIONS%
-ver>nul
-
-goto exit0
-
-::::::::::::
-:chefdk
-::::::::::::
-
-if not defined CHEFDK_URL if "%CM_VERSION%" == "latest" set CM_VERSION=2.3.4
-
-:: srtrip -1 if %CM_VERSION% ends in -1
-set CM_VERSION=%CM_VERSION:-1=%
-
-if not defined CHEFDK_URL (
-    echo ==^> Getting ChefDK %CM_VERSION% download URL
-    set "omnitruck_x86_url=https://omnitruck.chef.io/stable/chefdk/metadata?p=windows&pv=2008r2&m=x86&v=%CM_VERSION%"
-    call _packer_config.cmd ps1_download "!omnitruck_x86_url!" "%temp%\omnitruck_x86.txt"
-
-    if not exist "%temp%\omnitruck_x86.txt" (
-        echo Could not get chefdk %CM_VERSION% x86 download url...
-    ) else (
-      for /f "tokens=2 usebackq" %%a in (`findstr "url" "%temp%\omnitruck_x86.txt"`) do (
-          set CHEFDK_32_URL=%%a
-      )
-    )
-
-    if defined ProgramFiles^(x86^) (
-        set "omnitruck_x64_url=https://omnitruck.chef.io/stable/chefdk/metadata?p=windows&pv=2008r2&m=x64&v=%CM_VERSION%"
-        call _packer_config.cmd ps1_download "!omnitruck_x64_url!" "%temp%\omnitruck_x64.txt"
-
-        if not exist "%temp%\omnitruck_x64.txt" (
-            echo Could not get chefdk %CM_VERSION% x64 download url...
-        ) else (
-            for /f "tokens=2 usebackq" %%a in (`findstr "url" "%temp%\omnitruck_x64.txt"`) do (
-                set CHEFDK_64_URL=%%a
-            )
-        )
-    )
-
-    if defined CHEFDK_64_URL (
-        SET CHEFDK_URL=!CHEFDK_64_URL!
-        SET CHEFDK_ARCH=x86_64
-    ) else if defined CHEFDK_32_URL (
-        SET CHEFDK_URL=!CHEFDK_32_URL!
-        SET CHEFDK_ARCH=x86
-    )
-
-    if not defined CHEFDK_URL (
-      echo Could not get chefdk %CM_VERSION% download url...
-      goto exit1
-    )
+@if errorlevel 1 (
+  echo ==^> WARNING: Error %ERRORLEVEL% was returned by: msiexec /qb /i "%CHEF_PATH%" /l*v "%CHEF_DIR%\chef.log" %CHEF_OPTIONS%
+  exit /b 1
 )
+exit /b 0
 
-for %%i in ("%CHEFDK_URL%") do set CHEFDK_MSI=%%~nxi
-set CHEFDK_DIR=%TEMP%\chefdk
-set CHEFDK_PATH=%CHEFDK_DIR%\%CHEFDK_MSI%
-
-echo ==^> Creating "%CHEFDK_DIR%"
-mkdir "%CHEFDK_DIR%"
-pushd "%CHEFDK_DIR%"
-
-echo ==^> Downloading Chef DK to %CHEFDK_PATH%
-if exist "%SystemRoot%\_download.cmd" (
-  call "%SystemRoot%\_download.cmd" "%CHEFDK_URL%" "%CHEFDK_PATH%"
-) else (
-  call _packer_config.cmd ps1_download "%CHEFDK_URL%" "%CHEFDK_PATH%"
-)
-if not exist "%CHEFDK_PATH%" goto exit1
-
-echo ==^> Installing Chef Development Kit %CM_VERSION% %CHEFDK_ARCH%
-msiexec /qb /i "%CHEFDK_PATH%" /l*v "%CHEFDK_DIR%\chef.log" %CHEFDK_OPTIONS%
-
-@if errorlevel 1 echo ==^> WARNING: Error %ERRORLEVEL% was returned by: msiexec /qb /i "%CHEFDK_PATH%" /l*v "%CHEFDK_DIR%\chef.log" %CHEFDK_OPTIONS%
-ver>nul
-
-goto exit0
 
 ::::::::::::
 :puppet
