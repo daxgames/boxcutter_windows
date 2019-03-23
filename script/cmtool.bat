@@ -51,10 +51,8 @@ set CHEF_PRODUCT_VER=%CHEF_PRODUCT_VER:-1=%
 
 if defined ProgramFiles^(x86^) (
   set WINDOWS_ARCH=x64
-  SET CHEF_ARCH=x86_64
 ) else (
   set WINDOWS_ARCH=x86
-  SET CHEF_ARCH=x86
 )
 
 if not defined CHEF_URL (
@@ -62,26 +60,16 @@ if not defined CHEF_URL (
     set url="https://omnitruck.chef.io/stable/%CHEF_PRODUCT_KEY%/metadata?p=windows&pv=2012r2&m=%WINDOWS_ARCH%&v=%CHEF_PRODUCT_VER%"
     set filename="%temp%\omnitruck.txt"
 
-    echo "url: !url!"
-    echo "filename: !filename!"
+    echo "==^> Got %CHEF_DISPLAYNAME% download URL: !url!"
     if defined http_proxy (
         if defined no_proxy (
             powershell -Command "$wc = (New-Object System.Net.WebClient); $wc.proxy = (new-object System.Net.WebProxy('%http_proxy%')) ; $wc.proxy.BypassList = (('%no_proxy%').split(',')) ; $wc.DownloadFile('!url!', '!filename!')"
-            rem set ps1_script="$wc = (New-Object System.Net.WebClient) ; $wc.proxy = (new-object System.Net.WebProxy('%http_proxy%')) ; $wc.proxy.BypassList = (('%no_proxy%').split(',')) ; $wc.DownloadFile('!url!', '!filename!')"
         ) else (
             powershell -Command "$wc = (New-Object System.Net.WebClient); $wc.proxy = (new-object System.Net.WebProxy('%http_proxy%')) ; $wc.DownloadFile('!url!', '!filename!')"
-            rem set ps1_script="$wc = (New-Object System.Net.WebClient) ; $wc.proxy = (new-object System.Net.WebProxy('%http_proxy%')) ; $wc.DownloadFile('!url!', '!filename!')"
         )
     ) else (
         powershell -command "(New-Object System.Net.WebClient).DownloadFile('!url!', '!filename!')"
-        rem set ps1_script="(New-Object System.Net.WebClient).DownloadFile('!url!', '!filename!')"
     )
-
-    rem echo powershell -command !ps1_script!
-    rem powershell -command !ps1_script!
-
-    rem echo Calling ps1_download ps1_download !url! !filename!
-    rem call _packer_config.cmd ps1_download !url! !filename!
 
     if not exist "%temp%\omnitruck.txt" (
         echo Could not get %CHEF_DISPLAYNAME% %CHEF_PRODUCT_VER% %WINDOWS_ARCH% download url...
@@ -113,7 +101,7 @@ if exist "%SystemRoot%\_download.cmd" (
 )
 if not exist "%CHEF_PATH%" goto exit1
 
-echo ==^> Installing %CHEF_PRODUCT_NAME% %CHEF_PRODUCT_VER% %CHEF_ARCH%
+echo ==^> Installing %CHEF_PRODUCT_NAME% %CHEF_PRODUCT_VER% %WINDOWS_ARCH%
 msiexec /qb /i "%CHEF_PATH%" /l*v "%CHEF_DIR%\chef.log" %CHEF_OPTIONS%
 
 @if errorlevel 1 (
