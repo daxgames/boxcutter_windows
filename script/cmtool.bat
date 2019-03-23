@@ -58,7 +58,7 @@ if not defined CHEF_URL (
     set url="https://omnitruck.chef.io/stable/%CHEF_PRODUCT_KEY%/metadata?p=windows&pv=2012r2&m=%WINDOWS_ARCH%&v=%CHEF_PRODUCT_VER%"
     set filename="%temp%\omnitruck.txt"
 
-    echo "==^> Got %CHEF_PRODUCT_NAME% download URL: !url!"
+    echo "==^> Using Chef Omitruck API URL: !url!"
     if defined http_proxy (
         if defined no_proxy (
             powershell -Command "$wc = (New-Object System.Net.WebClient); $wc.proxy = (new-object System.Net.WebProxy('%http_proxy%')) ; $wc.proxy.BypassList = (('%no_proxy%').split(',')) ; $wc.DownloadFile('!url!', '!filename!')"
@@ -81,6 +81,7 @@ if not defined CHEF_URL (
       echo Could not get %CHEF_PRODUCT_NAME% %CHEF_PRODUCT_VER% %WINDOWS_ARCH% download url...
       goto exit1
     )
+    echo "==^> Got %CHEF_PRODUCT_NAME% download URL: !CHEF_URL!"
 )
 
 for %%i in ("%CHEF_URL%") do set CHEF_MSI=%%~nxi
