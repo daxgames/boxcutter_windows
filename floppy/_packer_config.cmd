@@ -74,6 +74,7 @@ exit /b
       set ps1_script="(New-Object System.Net.WebClient).DownloadFile('%url%', '%filename%')"
   )
 
+  echo ==^> powershell -command %ps1_script%
   powershell -command %ps1_script% >nul
   exit /b
 
