@@ -16,20 +16,6 @@ call "%~dp0\_download.cmd" "%WGET_URL%" "%filename%"
 
 if exist "%filename%" goto exit0
 
-set bitsadmin=
-
-for %%i in (bitsadmin.exe) do set bitsadmin=%%~$PATH:i
-
-if not defined bitsadmin set bitsadmin=%SystemRoot%\System32\bitsadmin.exe
-
-if not exist "%bitsadmin%" goto exit1
-
-for %%i in ("%filename%") do set jobname=%%~nxi
-
-"%bitsadmin%" /transfer "%jobname%" "%WGET_URL%" "%filename%"
-
-if exist "%filename%" goto exit0
-
 goto exit1
 
 :exit0
