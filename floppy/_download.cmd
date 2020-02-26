@@ -83,7 +83,7 @@ if not errorlevel 1 if exist "%filename%" goto exit0
 :bitsadmin
 
 if defined DISABLE_BITS (
-    if "%DISABLE_BITS%" == "1" if not exist "%filename%" goto exit1set bitsadmin=
+    if "%DISABLE_BITS%" == "1" if not exist "%filename%" goto exit1
 )
 
 for %%i in (bitsadmin.exe) do set bitsadmin=%%~$PATH:i
