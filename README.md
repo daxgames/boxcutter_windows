@@ -157,6 +157,8 @@ set ftp_proxy=http://[proxy_host]:[proxy_port]
 set http_proxy=http://[proxy_host]:[proxy_port]
 set https_proxy=http://[proxy_host]:[proxy_port]
 set no_proxy=127.0.0.1,localhost,[no_proxy_hosts]### Acknowledgments
+set no_proxy=127.0.0.1,localhost,[no_proxy_hosts]
+```
 
 [Parallels](http://www.parallels.com/) provides a Business Edition license of
 their software to run on the basebox build farm.
