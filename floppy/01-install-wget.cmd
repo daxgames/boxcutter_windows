@@ -10,35 +10,9 @@ if not defined WGET_URL set WGET_URL=https://eternallybored.org/misc/wget/curren
 
 for %%i in ("%WGET_URL%") do set filename=%SystemRoot%\%%~nxi
 
-if not exist "%~dp0\_download.cmd" goto _download_cmd_not_found
-
 copy /y "%~dp0\_download.cmd" "%SystemRoot%\"
 
 call "%~dp0\_download.cmd" "%WGET_URL%" "%filename%"
-
-if exist "%filename%" goto exit0
-
-:_download_cmd_not_found
-
-echo ==^> Downloading "%WGET_URL%" to "%filename%"
-
-:powershell
-
-powershell -Command "(New-Object System.Net.WebClient).DownloadFile('%WGET_URL%', '%filename%')" <NUL
-
-if exist "%filename%" goto exit0
-
-set bitsadmin=
-
-for %%i in (bitsadmin.exe) do set bitsadmin=%%~$PATH:i
-
-if not defined bitsadmin set bitsadmin=%SystemRoot%\System32\bitsadmin.exe
-
-if not exist "%bitsadmin%" goto exit1
-
-for %%i in ("%filename%") do set jobname=%%~nxi
-
-"%bitsadmin%" /transfer "%jobname%" "%WGET_URL%" "%filename%"
 
 if exist "%filename%" goto exit0
 
