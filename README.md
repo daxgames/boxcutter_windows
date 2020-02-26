@@ -160,6 +160,8 @@ set no_proxy=127.0.0.1,localhost,[no_proxy_hosts]### Acknowledgments
 set no_proxy=127.0.0.1,localhost,[no_proxy_hosts]
 ```
 
+### Acknowledgments
+
 [Parallels](http://www.parallels.com/) provides a Business Edition license of
 their software to run on the basebox build farm.
 
